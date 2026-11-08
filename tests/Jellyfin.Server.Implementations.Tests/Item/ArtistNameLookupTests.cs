@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using AutoFixture;
 using AutoFixture.AutoMoq;
@@ -108,6 +109,33 @@ public sealed class ArtistNameLookupTests : SqliteDbTestFixture
         }
 
         Assert.Equal(artistId, CreateLibraryManager(lookup).GetArtist("Bjork").Id);
+    }
+
+    [Fact]
+    public void GetArtists_LargeNameSet_DoesNotExceedSqliteVariableLimit()
+    {
+        // The artists post-scan task looks up every artist name in the library at once.
+        var lookup = new ItemTypeLookup();
+        var artistId = Guid.NewGuid();
+        using (var context = CreateDbContext())
+        {
+            context.BaseItems.Add(new BaseItemEntity
+            {
+                Id = artistId,
+                Name = "artist-0",
+                CleanName = "artist-0".GetCleanValue(),
+                Type = lookup.BaseItemKindNames[BaseItemKind.MusicArtist]
+            });
+            context.SaveChanges();
+        }
+
+        var names = Enumerable.Range(0, 40_000).Select(i => "artist-" + i.ToString(CultureInfo.InvariantCulture)).ToList();
+
+        var artists = CreateLibraryManager(lookup).GetArtists(names);
+
+        var (name, found) = Assert.Single(artists);
+        Assert.Equal("artist-0", name);
+        Assert.Equal(artistId, Assert.Single(found).Id);
     }
 
     private ServerLibraryManager CreateLibraryManager(ItemTypeLookup lookup)

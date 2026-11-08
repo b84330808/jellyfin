@@ -90,7 +90,7 @@ public class LinkedChildrenService : ILinkedChildrenService
         var artists = dbContext.BaseItems
             .AsNoTracking()
             .Where(e => e.Type == _itemTypeLookup.BaseItemKindNames[BaseItemKind.MusicArtist]!)
-            .Where(e => cleanValues.Contains(e.CleanName))
+            .WhereOneOrMany(cleanValues, e => e.CleanName)
             .ToArray();
 
         var lookup = artists
