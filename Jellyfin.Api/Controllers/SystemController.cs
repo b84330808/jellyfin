@@ -220,9 +220,9 @@ public class SystemController : BaseJellyfinApiController
             return NotFound("Log file not found.");
         }
 
-        // For older files, assume fully static
-        var fileShare = file.LastWriteTimeUtc < DateTime.UtcNow.AddHours(-1) ? FileShare.Read : FileShare.ReadWrite;
-        FileStream stream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, fileShare, IODefaults.FileStreamBufferSize, FileOptions.Asynchronous);
+        // The current log file is kept open for writing by the logger, and its last write time
+        // can't be trusted to tell it apart from older files (Windows reports the time it was opened)
+        FileStream stream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, IODefaults.FileStreamBufferSize, FileOptions.Asynchronous);
         return File(stream, "text/plain; charset=utf-8");
     }
 }
